@@ -1,5 +1,6 @@
 import { Uploader } from "uploader";
 import { UploadButton } from "react-uploader";
+import React, { useState, useRef } from 'react';
 
 const uploader = Uploader({
   apiKey: "public_kW15biSARCJN7FAz6rANdRg3pNkh",
@@ -39,6 +40,10 @@ const options = {
 };
 
 const ChatForm = ({ prompt, setPrompt, onSubmit, handleFileUpload }) => {
+  const [isRecording, setIsRecording] = useState(false);
+  // Reference to store the SpeechRecognition instance
+  const recognitionRef = useRef(null);
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     onSubmit(prompt);
@@ -51,6 +56,28 @@ const ChatForm = ({ prompt, setPrompt, onSubmit, handleFileUpload }) => {
       event.preventDefault();
       handleSubmit(event);
     }
+  };
+
+  const startSpeechRecognition = () => {
+    recognitionRef.current = new window.webkitSpeechRecognition();
+    recognitionRef.current.continuous = true;
+    recognitionRef.current.interimResults = true;
+
+    recognitionRef.current.onresult = (event) => {
+      const { transcript } = event.results[event.results.length - 1][0];
+      console.log(event.results);
+      setPrompt(transcript);
+    };
+
+    recognitionRef.current.start();
+    setIsRecording(true); // Set recording state to true
+  };
+
+  const stopSpeechRecognition = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+    setIsRecording(false); // Set recording state to false
   };
 
   return (
@@ -87,6 +114,37 @@ const ChatForm = ({ prompt, setPrompt, onSubmit, handleFileUpload }) => {
               e.target.rows = lineCount > 10 ? 10 : lineCount;
             }}
           />
+          {/* Transcribe button */}
+          <button
+            className={`items-center font-semibold text-white px-5 py-3 ${
+              isRecording ? 'bg-red-400 hover:bg-red-600' : 'bg-blue-600 hover:bg-blue-800'
+            }`}
+            onClick={isRecording ? stopSpeechRecognition : startSpeechRecognition}
+          >
+            {isRecording ? (
+              // SVG for when recording is active
+              <svg
+                className="h-8 w-8"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path fill="white" d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+              </svg>
+            ) : (
+              // SVG for when not recording
+              <svg
+                viewBox="0 0 256 256"
+                xmlns="http://www.w3.org/2000/svg"
+                className="w-8 h-8 text-white"
+              >
+                <path
+                  fill="currentColor"
+                  d="M128 176a48.05 48.05 0 0 0 48-48V64a48 48 0 0 0-96 0v64a48.05 48.05 0 0 0 48 48ZM96 64a32 32 0 0 1 64 0v64a32 32 0 0 1-64 0Zm40 143.6V232a8 8 0 0 1-16 0v-24.4A80.11 80.11 0 0 1 48 128a8 8 0 0 1 16 0a64 64 0 0 0 128 0a8 8 0 0 1 16 0a80.11 80.11 0 0 1-72 79.6Z"
+                />
+              </svg>
+            )}
+          </button>
+          {/* Chat button */}
           <button
             className="bg-gray-600 hover:bg-gray-800 items-center font-semibold text-white rounded-r-md px-5 py-3"
             type="submit"
